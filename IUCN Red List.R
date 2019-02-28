@@ -19,6 +19,7 @@ for (i in 1:9) {
 
 }
 
+write.csv(df_species, file="species_list.csv")
 
 regions = rl_regions(key)
 regions = regions$results$identifier
@@ -58,7 +59,7 @@ for (i in 1:length(dfhistory$Species)) {
   
 }
 
-write.csv(dfhistory, file="Project/iucn_historical_raw.csv")
+write.csv(dfhistory, file="iucn_historical_raw.csv")
 
 dfManyHistories = filter(dfhistory, count>1 & code_mod!="NA")
 all_years = sort(as.numeric(unique(dfManyHistories$year)))
