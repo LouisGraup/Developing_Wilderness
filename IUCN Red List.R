@@ -1,9 +1,7 @@
 
-# reframe analysis to be focused on individual species, rather than country
-# weight countries of occurrence by fraction of habitat region in that country
-
 library(rredlist)
 library(tidyverse)
+library(data.table)
 
 key='22e39dd150d9c1e4651b3e9134bc606169e0cb50f1958a9278a76f9582dc2dc8'
 
@@ -63,6 +61,7 @@ write.csv(dfhistory, file="iucn_historical_raw.csv")
 
 dfManyHistories = filter(dfhistory, count>1 & code_mod!="NA")
 all_years = sort(as.numeric(unique(dfManyHistories$year)))
+all_species = unique(dfManyHistories$Species)
 
 ggplot(dfManyHistories, aes(x=year, y=..count..)) + geom_bar(aes(fill=code_mod))
 
@@ -82,15 +81,13 @@ for (i in 1:num_countries) {
   
   dfSpeciesbyCountry[[i]] = list(country=df_countries$isocode[i], history=filter(dfManyHistories, Species==SpeciesbyCountry$result$scientific_name[1]))
   
-  for (j in 2:SpeciesbyCountry$count) {
-    dfSpeciesbyCountry[[i]]$history = rbind(dfSpeciesbyCountry[[i]]$history, filter(dfManyHistories, Species==SpeciesbyCountry$result$scientific_name[j]))
-    
+    for (j in 2:SpeciesbyCountry$count) {
+      dfSpeciesbyCountry[[i]]$history = rbind(dfSpeciesbyCountry[[i]]$history, filter(dfManyHistories, Species==SpeciesbyCountry$result$scientific_name[j]))
+    }
   }
   else {
     dfSpeciesbyCountry[[i]]$country = df_countries$isocode[i]
   }
-  }
-  
 }
 
 save(dfSpeciesbyCountry, file="SpeciesbyCountry.Rda")
@@ -120,6 +117,38 @@ for (i in 1:num_countries) {
 }
 
 save(dfCountryRisk, file="CountryRiskbyYear.Rda")
+
+# get list of countries for each species
+
+for (i in 1:length(all_species)) {
+  
+  CountrybySpecies = rl_occ_country(name=all_species[i], key=key)
+  CountrybySpecies$result$Species = all_species[i]
+  dtCountrybySpecies = setDT(CountrybySpecies$result)
+  
+  # combine with histories to obtain risk level for each country, in each year
+  tempHistory = setDT(filter(dfManyHistories, Species==all_species[i]))
+  dtHistoriesbyCountry = tempHistory[dtCountrybySpecies, on="Species", allow.cartesian=TRUE]
+  
+  if (i==1) {
+    dfCountrybySpecies = dtHistoriesbyCountry
+  }
+  else {
+    dfCountrybySpecies = rbind(dfCountrybySpecies, dtHistoriesbyCountry, fill=TRUE)
+  }
+  
+}
+
+save(dfCountrybySpecies, file="CountrybySpecies.Rda")
+
+# unique species ID list
+species_id = array(0, length(all_species))
+
+for (i in 1:length(all_species)) {
+  
+  species_id[i] = df_species$taxonid[which(df_species$scientific_name==all_species[i])]
+  
+}
 
 
 iucn_rli = function(risk) {
