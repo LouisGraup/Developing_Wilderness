@@ -92,31 +92,6 @@ for (i in 1:num_countries) {
 
 save(dfSpeciesbyCountry, file="SpeciesbyCountry.Rda")
 
-dfCountryRisk = data.frame(matrix(nrow=num_countries, ncol=length(all_years)+1))
-colnames(dfCountryRisk) = c("Country",all_years)
-
-for (i in 1:num_countries) {
-  
-  CountryRisk = dfSpeciesbyCountry[[i]]$history
-  CountryRisk$year = as.numeric(CountryRisk$year)
-  dfCountryRisk$Country[i] = dfSpeciesbyCountry[[i]]$country
-  
-  if (length(CountryRisk$year)>0) {
-  
-  years = unique(CountryRisk$year)
-  
-  for (j in 1:length(years)) {
-    # loop through all years of record and calculate RLI
-    CountryRiskbyYear = filter(CountryRisk, year==years[j])
-    dfCountryRisk[[which(all_years==years[j])+1]][i] = iucn_rli(CountryRiskbyYear$risk)
-    
-  }
-  
-  }
-  
-}
-
-save(dfCountryRisk, file="CountryRiskbyYear.Rda")
 
 # get list of countries for each species
 
@@ -139,7 +114,35 @@ for (i in 1:length(all_species)) {
   
 }
 
+dfCountrybySpecies$weight = 1
 save(dfCountrybySpecies, file="CountrybySpecies.Rda")
+
+
+dfCountryRisk = data.frame(matrix(nrow=num_countries, ncol=length(all_years)+1))
+colnames(dfCountryRisk) = c("Country",all_years)
+
+for (i in 1:num_countries) {
+  
+  CountryRisk = filter(dfCountrybySpecies, country==df_countries$country[i])
+  dfCountryRisk$Country[i] = df_countries$country[i]
+  
+  if (length(CountryRisk$year)>0) {
+    
+    years = unique(CountryRisk$year)
+    
+    for (j in 1:length(years)) {
+      # loop through all years of record and calculate RLI
+      CountryRiskbyYear = filter(CountryRisk, year==years[j])
+      dfCountryRisk[[which(all_years==years[j])+1]][i] = iucn_rli(CountryRiskbyYear$risk*CountryRiskbyYear$weight)
+      
+    }
+    
+  }
+  
+}
+
+save(dfCountryRisk, file="CountryRiskbyYear.Rda")
+
 
 # unique species ID list
 species_id = array(0, length(all_species))
