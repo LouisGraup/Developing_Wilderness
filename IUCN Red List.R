@@ -3,15 +3,16 @@ library(rredlist)
 library(tidyverse)
 library(data.table)
 
-key='22e39dd150d9c1e4651b3e9134bc606169e0cb50f1958a9278a76f9582dc2dc8'
+key='22e39dd150d9c1e4651b3e9134bc606169e0cb50f1958a9278a76f9582dc2dc8' #unique key for IUCN data access
 
-species = rl_sp(page=0, key=key)
+# grab list of all species in IUCN database
+species = rl_sp(page=0, key=key) # call to server
 
 df_species = species$result
 
 for (i in 1:9) {
 
-  out = rl_sp(page=i, key=key)
+  out = rl_sp(page=i, key=key) # call to server
 
   df_species = rbind(df_species, out$result)
 
@@ -19,7 +20,9 @@ for (i in 1:9) {
 
 write.csv(df_species, file="species_list.csv")
 
-regions = rl_regions(key)
+# loop through regions to grab historical classifications of each species
+
+regions = rl_regions(key) # call to server
 regions = regions$results$identifier
 
 
@@ -27,7 +30,7 @@ for (i in 1:dim(df_species)[1]) {
   
   for (j in 1:length(regions)) {
   
-    history = rl_history(name=df_species$scientific_name[i], key=key, region=regions[j])
+    history = rl_history(name=df_species$scientific_name[i], key=key, region=regions[j]) # call to server
     if (length(history$result)) {
       
       tempdf = history$result
@@ -48,7 +51,7 @@ for (i in 1:dim(df_species)[1]) {
   
 }
 
-
+# calculate # of classifications per species and IUCN Red List code/risk
 for (i in 1:length(dfhistory$Species)) {
   
   dfhistory$count[i] = sum(dfhistory$Species[i]==dfhistory$Species)
@@ -59,45 +62,52 @@ for (i in 1:length(dfhistory$Species)) {
 
 write.csv(dfhistory, file="iucn_historical_raw.csv")
 
+# remove species with only one classification
+
 dfManyHistories = filter(dfhistory, count>1 & code_mod!="NA")
+
+# get list of years and species
 all_years = sort(as.numeric(unique(dfManyHistories$year)))
 all_species = unique(dfManyHistories$Species)
 
 ggplot(dfManyHistories, aes(x=year, y=..count..)) + geom_bar(aes(fill=code_mod))
 
+# get list of countries
 countries = rl_countries(key)
 df_countries = countries$results
 
 num_countries = dim(df_countries)[1]
-dfSpeciesbyCountry = array(list(), num_countries)
 
-for (i in 1:num_countries) {
-  
-  SpeciesbyCountry = rl_sp_country(df_countries$isocode[i], key=key)
-  
-  # loop through each country's species and grab all years of record
-  
-  if (SpeciesbyCountry$count>0) {
-  
-  dfSpeciesbyCountry[[i]] = list(country=df_countries$isocode[i], history=filter(dfManyHistories, Species==SpeciesbyCountry$result$scientific_name[1]))
-  
-    for (j in 2:SpeciesbyCountry$count) {
-      dfSpeciesbyCountry[[i]]$history = rbind(dfSpeciesbyCountry[[i]]$history, filter(dfManyHistories, Species==SpeciesbyCountry$result$scientific_name[j]))
-    }
-  }
-  else {
-    dfSpeciesbyCountry[[i]]$country = df_countries$isocode[i]
-  }
-}
+# old methodology
+# dfSpeciesbyCountry = array(list(), num_countries)
+# 
+# for (i in 1:num_countries) {
+#   
+#   SpeciesbyCountry = rl_sp_country(df_countries$isocode[i], key=key)
+#   
+#   # loop through each country's species and grab all years of record
+#   
+#   if (SpeciesbyCountry$count>0) {
+#   
+#   dfSpeciesbyCountry[[i]] = list(country=df_countries$isocode[i], history=filter(dfManyHistories, Species==SpeciesbyCountry$result$scientific_name[1]))
+#   
+#     for (j in 2:SpeciesbyCountry$count) {
+#       dfSpeciesbyCountry[[i]]$history = rbind(dfSpeciesbyCountry[[i]]$history, filter(dfManyHistories, Species==SpeciesbyCountry$result$scientific_name[j]))
+#     }
+#   }
+#   else {
+#     dfSpeciesbyCountry[[i]]$country = df_countries$isocode[i]
+#   }
+# }
+# 
+# save(dfSpeciesbyCountry, file="SpeciesbyCountry.Rda")
 
-save(dfSpeciesbyCountry, file="SpeciesbyCountry.Rda")
-
-
+# new methodology
 # get list of countries for each species
 
 for (i in 1:length(all_species)) {
   
-  CountrybySpecies = rl_occ_country(name=all_species[i], key=key)
+  CountrybySpecies = rl_occ_country(name=all_species[i], key=key) # call to server
   CountrybySpecies$result$Species = all_species[i]
   dtCountrybySpecies = setDT(CountrybySpecies$result)
   
@@ -114,9 +124,11 @@ for (i in 1:length(all_species)) {
   
 }
 
+# assign weight according to habitat area within a given country
 dfCountrybySpecies$weight = 1
 save(dfCountrybySpecies, file="CountrybySpecies.Rda")
 
+# calculate RLI for each country based on weighted species risk in that country
 
 dfCountryRisk = data.frame(matrix(nrow=num_countries, ncol=length(all_years)+1))
 colnames(dfCountryRisk) = c("Country",all_years)
