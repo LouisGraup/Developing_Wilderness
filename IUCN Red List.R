@@ -156,6 +156,10 @@ for (i in 1:num_countries) {
 save(dfCountryRisk, file="CountryRiskbyYear.Rda")
 
 
+dfCountryPlot = melt(dfCountryRisk, id.vars="Country", measure.vars=as.character(all_years), variable.name="year", value.name="RLI")
+dfCountryPlot = na.omit(dfCountryPlot)
+ggplot(dfCountryPlot, aes(x=year, y=RLI, group=Country))+geom_line()
+
 # unique species ID list
 species_id = array(0, length(all_species))
 
