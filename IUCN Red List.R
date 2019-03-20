@@ -124,9 +124,51 @@ for (i in 1:length(all_species)) {
   
 }
 
-# assign weight according to habitat area within a given country
-dfCountrybySpecies$weight = 1
+
+gdp_species$weight = 1
+# update data with gdp and habitat extent information
+
+for (i in 1:length(gdp_species$binomial)) {
+  # calculate weight for each species in each country 
+  # based on percentage of species' habitat in an individual country over the total habitat extent
+  gdp_species$weight[i] = gdp_species$area[i]/sum(filter(gdp_species, binomial==gdp_species$binomial[i])$area)
+  
+}
+
+# identifier column
+gdp_species$id = paste(gdp_species$country, gdp_species$binomial)
+
+# combine dfCountrybySpecies and gdp_species based on identifier
+for (i in 28994:length(dfCountrybySpecies$Species)) {
+  
+  j = match(paste(dfCountrybySpecies$country[i], dfCountrybySpecies$Species[i]), gdp_species$id)
+  if (!is.na(j)) {
+  dfCountrybySpecies$country_area_sqmil[i] = gdp_species$area_sqmil[j]
+  dfCountrybySpecies$country_area_sqkm[i] = gdp_species$area_sqkm[j]
+  dfCountrybySpecies$species_area[i] = gdp_species$area[j]
+  dfCountrybySpecies$pct_species_country[i] = gdp_species$pct_specie_country[j]
+  dfCountrybySpecies$yr2000[i] = gdp_species$yr2000[j]
+  dfCountrybySpecies$yr2001[i] = gdp_species$yr2001[j]
+  dfCountrybySpecies$yr2002[i] = gdp_species$yr2002[j]
+  dfCountrybySpecies$yr2003[i] = gdp_species$yr2003[j]
+  dfCountrybySpecies$yr2004[i] = gdp_species$yr2004[j]
+  dfCountrybySpecies$yr2005[i] = gdp_species$yr2005[j]
+  dfCountrybySpecies$yr2006[i] = gdp_species$yr2006[j]
+  dfCountrybySpecies$yr2007[i] = gdp_species$yr2007[j]
+  dfCountrybySpecies$yr2008[i] = gdp_species$yr2008[j]
+  dfCountrybySpecies$yr2009[i] = gdp_species$yr2009[j]
+  dfCountrybySpecies$yr2010[i] = gdp_species$yr2010[j]
+  dfCountrybySpecies$yr2011[i] = gdp_species$yr2011[j]
+  dfCountrybySpecies$yr2012[i] = gdp_species$yr2012[j]
+  dfCountrybySpecies$yr2013[i] = gdp_species$yr2013[j]
+  dfCountrybySpecies$yr2014[i] = gdp_species$yr2014[j]
+  dfCountrybySpecies$yr2015[i] = gdp_species$yr2015[j]
+  dfCountrybySpecies$weight[i] = gdp_species$weight[j]
+  }
+}
+
 save(dfCountrybySpecies, file="CountrybySpecies.Rda")
+
 
 # calculate RLI for each country based on weighted species risk in that country
 
