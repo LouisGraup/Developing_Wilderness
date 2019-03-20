@@ -168,6 +168,7 @@ for (i in 28994:length(dfCountrybySpecies$Species)) {
 }
 
 save(dfCountrybySpecies, file="CountrybySpecies.Rda")
+write.csv(dfCountrybySpecies, file="CountrybySpecies.csv")
 
 
 # calculate RLI for each country based on weighted species risk in that country
@@ -187,7 +188,7 @@ for (i in 1:num_countries) {
     for (j in 1:length(years)) {
       # loop through all years of record and calculate RLI
       CountryRiskbyYear = filter(CountryRisk, year==years[j])
-      dfCountryRisk[[which(all_years==years[j])+1]][i] = iucn_rli(CountryRiskbyYear$risk*CountryRiskbyYear$weight)
+      dfCountryRisk[[which(all_years==years[j])+1]][i] = iucn_rli(CountryRiskbyYear$risk, CountryRiskbyYear$weight)
       
     }
     
@@ -196,7 +197,7 @@ for (i in 1:num_countries) {
 }
 
 save(dfCountryRisk, file="CountryRiskbyYear.Rda")
-
+write.csv(dfCountryRisk, file="CountryRiskbyYear.csv")
 
 dfCountryPlot = melt(dfCountryRisk, id.vars="Country", measure.vars=as.character(all_years), variable.name="year", value.name="RLI")
 dfCountryPlot = na.omit(dfCountryPlot)
@@ -212,10 +213,10 @@ for (i in 1:length(all_species)) {
 }
 
 
-iucn_rli = function(risk) {
+iucn_rli = function(risk, weight) {
   
   # calculate Red List Index as defined by IUCN
-  RLI = 1 - (sum(risk) / (length(risk)*5))
+  RLI = 1 - (sum(risk*weight) / (sum(weight)*5))
   return(RLI)
   
 }
